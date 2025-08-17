@@ -2,104 +2,98 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Cat Fortress 2 🐱</title>
+<title>Cat Fortress 2</title>
 <style>
-  canvas {
-    border:1px solid #000;
-    display:block;
-    margin:0 auto;
-    background:#a0d8f1;
-  }
+  body { margin: 0; overflow: hidden; background: #87ceeb; }
+  canvas { display: block; background: #87ceeb; }
 </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="800" height="400"></canvas>
+<canvas id="gameCanvas"></canvas>
+
 <script>
-/**/ const canvas = document.getElementById('gameCanvas');
-/**/ const ctx = canvas.getContext('2d');
+// /**/ Game setup
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 800;
+canvas.height = 400;
 
-/**/ // Load images
-/**/ const floorImg = new Image();
-floorImg.src = 'floor.png'; // your 512x127 floor PNG
-/**/ const stairsImg = new Image();
-stairsImg.src = 'stairs.png'; // your 40x32 stairs PNG
+// /**/ Load images
+const floorImg = new Image();
+floorImg.src = 'floor.png'; // your floor PNG
 
-/**/ // Player 🐱
-/**/ const player = {
-  x: 50,
-  y: canvas.height - 127 - 32,
-  width: 32,
-  height: 32,
-  vy:0,
-  speed:3,
-  jumpPower:8,
-  onGround:false
-};
+const stairsImg = new Image();
+stairsImg.src = 'stairs.png'; // your stairs PNG
 
-/**/ // Floor
-/**/ const floor = {x:0, y:canvas.height-127, width:512, height:127};
+// /**/ Scale settings
+const FLOOR_HEIGHT = 32; // height in game units
+const STAIRS_HEIGHT = 32;
+const SCALE = 1.5; // scale factor for all tiles
 
-/**/ // Stairs
-/**/ const stairs = [
-  {x:300, y:canvas.height-127-32, width:40, height:32},
-  {x:340, y:canvas.height-127-64, width:40, height:32},
-  {x:380, y:canvas.height-127-96, width:40, height:32}
-];
+// /**/ Tiles
+const floor = { x: 0, y: canvas.height - FLOOR_HEIGHT * SCALE, width: canvas.width, height: FLOOR_HEIGHT * SCALE };
+const stairs = { x: 300, y: canvas.height - FLOOR_HEIGHT * SCALE - STAIRS_HEIGHT * SCALE, width: 40 * SCALE, height: STAIRS_HEIGHT * SCALE };
 
-/**/ // Input
-/**/ const keys = {};
-/**/ document.addEventListener('keydown', e => keys[e.code]=true);
-/**/ document.addEventListener('keyup', e => keys[e.code]=false);
+// /**/ Player
+const player = { x: 50, y: floor.y - 32, width: 32, height: 32, vy: 0, speed: 3, jumping: false };
 
-/**/ function update() {
-  if(keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
-  if(keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
+// /**/ Gravity
+const gravity = 0.7;
 
-  player.vy += 0.5; // gravity
-  player.y += player.vy;
-  player.onGround=false;
+// /**/ Controls
+const keys = {};
+document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keyup', e => keys[e.key] = false);
 
-  if(player.y + player.height > floor.y) {
-    player.y = floor.y - player.height;
-    player.vy=0;
-    player.onGround=true;
-  }
+// /**/ Game loop
+function loop() {
+    // Clear
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  stairs.forEach(s=>{
-    if(player.x + player.width > s.x && player.x < s.x + s.width &&
-       player.y + player.height > s.y && player.y + player.height < s.y + s.height + player.vy) {
-      player.y = s.y - player.height;
-      player.vy=0;
-      player.onGround=true;
+    // Draw floor
+    ctx.drawImage(floorImg, 0, 0, floorImg.width, floorImg.height, floor.x, floor.y, floor.width, floor.height);
+
+    // Draw stairs
+    ctx.drawImage(stairsImg, 0, 0, stairsImg.width, stairsImg.height, stairs.x, stairs.y, stairs.width, stairs.height);
+
+    // Player movement
+    if (keys['ArrowLeft']) player.x -= player.speed;
+    if (keys['ArrowRight']) player.x += player.speed;
+    if (keys['ArrowUp'] && !player.jumping) {
+        player.vy = -12;
+        player.jumping = true;
     }
-  });
 
-  if((keys['ArrowUp'] || keys['KeyW'] || keys['Space']) && player.onGround){
-    player.vy=-player.jumpPower;
-  }
+    // Apply gravity
+    player.vy += gravity;
+    player.y += player.vy;
+
+    // Collisions with floor
+    if (player.y + player.height > floor.y) {
+        player.y = floor.y - player.height;
+        player.vy = 0;
+        player.jumping = false;
+    }
+
+    // Collisions with stairs (simple AABB)
+    if (player.x + player.width > stairs.x &&
+        player.x < stairs.x + stairs.width &&
+        player.y + player.height > stairs.y &&
+        player.y + player.height < stairs.y + stairs.height + 10 &&
+        player.vy >= 0) {
+        player.y = stairs.y - player.height;
+        player.vy = 0;
+        player.jumping = false;
+    }
+
+    // Draw cat emoji player
+    ctx.font = player.height + 'px Arial';
+    ctx.fillText('🐱', player.x, player.y + player.height);
+
+    requestAnimationFrame(loop);
 }
 
-/**/ function draw() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  // Draw floor PNG
-  ctx.drawImage(floorImg, floor.x, floor.y, floor.width, floor.height);
-
-  // Draw stairs PNGs
-  stairs.forEach(s=> ctx.drawImage(stairsImg, s.x, s.y, s.width, s.height));
-
-  // Draw player 🐱
-  ctx.font = player.height+'px serif';
-  ctx.fillText('🐱', player.x, player.y + player.height);
-}
-
-/**/ function gameLoop() {
-  update();
-  draw();
-  requestAnimationFrame(gameLoop);
-}
-
-/**/ gameLoop();
+loop();
 </script>
 </body>
 </html>
