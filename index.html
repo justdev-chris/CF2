@@ -4,18 +4,29 @@
 <meta charset="UTF-8">
 <title>Cat Fortress 2</title>
 <style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* remove scrollbars */
+  }
   canvas {
-    background: #87ceeb;
     display: block;
-    margin: 0 auto;
   }
 </style>
 </head>
 <body>
-<canvas id="game" width="800" height="400"></canvas>
+<canvas id="game"></canvas>
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+
+// make canvas full screen
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// images
+const backgroundImg = new Image();
+backgroundImg.src = 'background.png'; // your background image
 
 const floorImg = new Image();
 floorImg.src = 'floor.png'; // 512x127
@@ -43,68 +54,63 @@ const gravity = 0.3;
 let bullets = [];
 
 function shoot() {
-  // bullets spawn from gun tip
   let bulletX = player.x + player.w/2 + (player.dir > 0 ? player.w/2 : -player.w/2);
-  let bulletY = player.y + player.h/2 - 5; // slightly above center
+  let bulletY = player.y + player.h/2 - 5;
   bullets.push({x: bulletX, y: bulletY, dx: player.dir*5, dy:0, size:5});
 }
 
 function update() {
-  // movement
   if(keys['a']) { player.x -= player.speed; player.dir = -1; }
   if(keys['d']) { player.x += player.speed; player.dir = 1; }
 
-  // jump
   if(keys[' '] && player.dy === 0) { player.dy = player.jump; }
 
   player.dy += gravity;
   player.y += player.dy;
 
-  // collision with floor
   if(player.y + player.h > floor.y) {
     player.y = floor.y - player.h;
     player.dy = 0;
   }
 
-  // collision with stairs
   stairs.forEach(s => {
     if(player.x + player.w > s.x && player.x < s.x + s.w && player.y + player.h > s.y && player.y < s.y + s.h) {
-      if(!keys['shift']) { // hold shift to noclip
+      if(!keys['shift']) {
         player.y = s.y - player.h;
         player.dy = 0;
       }
     }
   });
 
-  // bullets movement
   bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
   bullets = bullets.filter(b => b.x > 0 && b.x < canvas.width);
 }
 
 function draw() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // background
+  ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
 
-  // draw floor repeating
+  // floor repeating
   for(let i=0; i<canvas.width; i+=floor.w){
     ctx.drawImage(floorImg, i, floor.y, floor.w, floor.h);
   }
 
-  // draw stairs
+  // stairs
   stairs.forEach(s => ctx.drawImage(stairImg, s.x, s.y, s.w, s.h));
 
-  // draw player
+  // player
   ctx.font = player.h + "px serif";
   ctx.textBaseline = 'top';
   ctx.fillText(playerEmoji, player.x, player.y);
 
-  // draw gun on side of player
+  // gun
   ctx.save();
   ctx.translate(player.x + player.w/2, player.y + player.h/2);
-  ctx.scale(player.dir, 1); // flip gun based on direction
+  ctx.scale(player.dir, 1);
   ctx.fillText(gunEmoji, player.w/2, -player.h/2);
   ctx.restore();
 
-  // draw bullets
+  // bullets
   bullets.forEach(b => {
     ctx.fillStyle = 'black';
     ctx.fillRect(b.x, b.y, b.size, b.size);
@@ -117,7 +123,20 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-floorImg.onload = loop;
+backgroundImg.onload = () => {
+  floorImg.onload = () => {
+    stairImg.onload = () => {
+      loop();
+    }
+  }
+}
+
+// handle resizing
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  floor.y = canvas.height - floor.h;
+});
 </script>
 </body>
 </html>
