@@ -1,100 +1,98 @@
+<!-- Ultimate Cat TF2 Mini: Floor + Cat Player -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>CT2 Demo</title>
+<title>CF2 Demo</title>
 <style>
-  canvas { background: #87ceeb; display: block; margin: auto; }
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #cce7ff; /* sky-ish background */
+  }
+  canvas {
+    display: block;
+  }
 </style>
 </head>
 <body>
-<canvas id="game" width="640" height="480"></canvas>
+<canvas id="gameCanvas"></canvas>
 <script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+/** human typed it, hehe~ **/
 
-const gravity = 0.5;
-const keys = {};
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-let player = {
-  x: 50,
-  y: 50,
-  width: 32,
-  height: 32,
-  velocityX: 0,
-  velocityY: 0,
-  speed: 3,
-  color: 'red'
+canvas.width = 800;
+canvas.height = 400;
+
+// Floor
+const floorImg = new Image();
+floorImg.src = 'floor.png'; // replace with your 512x127 PNG floor tile
+const floor = {
+  x: 0,
+  y: canvas.height - 127,
+  width: canvas.width,
+  height: 127
 };
 
-// load your floor tile image
-const floorImg = new Image();
-floorImg.src = 'floor.png'; // make sure this PNG is in the same folder
+// Player (cat emoji)
+const player = {
+  x: 100,
+  y: 0,
+  width: 32,
+  height: 32,
+  vy: 0,
+  gravity: 0.8,
+  jumpPower: -12
+};
 
-// floor tiles (example: one row at bottom)
-const tileSize = 32;
-const tiles = [
-  {x: 0, y: 400, width: 640, height: tileSize}
-];
-
-// controls
-document.addEventListener('keydown', e => keys[e.code] = true);
-document.addEventListener('keyup', e => keys[e.code] = false);
+// Keyboard input
+const keys = {};
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
 
 function update() {
-  // movement
-  player.velocityX = 0;
-  if(keys['ArrowLeft']) player.velocityX = -player.speed;
-  if(keys['ArrowRight']) player.velocityX = player.speed;
+  // Horizontal movement
+  if (keys["ArrowLeft"]) player.x -= 5;
+  if (keys["ArrowRight"]) player.x += 5;
 
-  // apply gravity
-  player.velocityY += gravity;
+  // Gravity
+  player.vy += player.gravity;
+  player.y += player.vy;
 
-  // move player
-  player.x += player.velocityX;
-  player.y += player.velocityY;
-
-  // simple collision
-  for(let tile of tiles) {
-    if(
-      player.x < tile.x + tile.width &&
-      player.x + player.width > tile.x &&
-      player.y < tile.y + tile.height &&
-      player.y + player.height > tile.y
-    ) {
-      player.y = tile.y - player.height;
-      player.velocityY = 0;
-    }
+  // Floor collision
+  if (player.y + player.height > floor.y) {
+    player.y = floor.y - player.height;
+    player.vy = 0;
   }
 
-  // jump
-  if(keys['Space']) {
-    for(let tile of tiles) {
-      if(player.y + player.height === tile.y) {
-        player.velocityY = -10;
-      }
-    }
+  // Jump
+  if (keys["ArrowUp"] && player.y + player.height === floor.y) {
+    player.vy = player.jumpPower;
   }
-
-  draw();
-  requestAnimationFrame(update);
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // draw tiles with PNG
-  for(let tile of tiles) {
-    ctx.drawImage(floorImg, tile.x, tile.y, tile.width, tile.height);
-  }
+  // Draw floor
+  ctx.drawImage(floorImg, floor.x, floor.y, floor.width, floor.height);
 
-  // draw player
-  ctx.fillStyle = player.color;
-  ctx.fillRect(player.x, player.y, player.width, player.height);
+  // Draw cat player
+  ctx.font = "32px serif";
+  ctx.fillText("🐱", player.x, player.y + player.height);
 }
 
-// start game after image loads
-floorImg.onload = () => update();
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+floorImg.onload = () => {
+  gameLoop();
+};
 </script>
 </body>
 </html>
