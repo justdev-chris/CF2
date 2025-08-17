@@ -1,114 +1,106 @@
-<!-- Cat Fortress 2 - lil catboy edition 🐾 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Cat Fortress 2</title>
+<title>Cat Fortress 2 🐱</title>
 <style>
-  body { margin:0; overflow:hidden; background:#b3e5fc; }
-  canvas { display:block; background:#b3e5fc; }
+  canvas {
+    border:1px solid #000;
+    display:block;
+    margin:0 auto;
+    background:#a0d8f1;
+  }
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-
+<canvas id="gameCanvas" width="800" height="400"></canvas>
 <script>
-/**/ const canvas = document.getElementById("game");
-/**/ const ctx = canvas.getContext("2d");
-/**/ canvas.width = window.innerWidth;
-/**/ canvas.height = window.innerHeight;
+/**/ const canvas = document.getElementById('gameCanvas');
+/**/ const ctx = canvas.getContext('2d');
 
-/**/ const floorImg = new Image();
-/**/ floorImg.src = "floor.png"; // your 512x127 floor tile
-/**/ const stairsImg = new Image();
-/**/ stairsImg.src = "stairs.png"; // stairs tile
-
-/**/ const gravity = 0.7;
-
+/**/ // Player 🐱
 /**/ const player = {
-  x: 100,
-  y: 0,
+  x: 50,
+  y: canvas.height - 127 - 32,
   width: 32,
   height: 32,
-  vy: 0,
-  onGround: false
+  vy:0,
+  speed:3,
+  jumpPower:8,
+  onGround:false
 };
 
-/**/ const keys = {};
+/**/ // Floor
+/**/ const floor = {x:0, y:canvas.height-127, width:512, height:127};
 
-/**/ const floorTiles = [
-  {x:0, y:canvas.height-127, width:512, height:127},
-  {x:512, y:canvas.height-127, width:512, height:127}
-];
-
+/**/ // Stairs 40x32, connected to floor
 /**/ const stairs = [
-  {x:300, y:canvas.height-127-32, width:64, height:32},
-  {x:364, y:canvas.height-127-64, width:64, height:32},
-  {x:428, y:canvas.height-127-96, width:64, height:32}
+  {x:300, y:canvas.height-127-32, width:40, height:32},
+  {x:340, y:canvas.height-127-64, width:40, height:32},
+  {x:380, y:canvas.height-127-96, width:40, height:32}
 ];
 
-/**/ window.addEventListener("keydown", e => keys[e.key] = true);
-/**/ window.addEventListener("keyup", e => keys[e.key] = false);
+/**/ // Input
+/**/ const keys = {};
+/**/ document.addEventListener('keydown', e => keys[e.code]=true);
+/**/ document.addEventListener('keyup', e => keys[e.code]=false);
 
-function drawFloor() {
-  for (let f of floorTiles) ctx.drawImage(floorImg, f.x, f.y, f.width, f.height);
-}
+/**/ function update() {
+  // Horizontal movement
+  if(keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
+  if(keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
 
-function drawStairs() {
-  for (let s of stairs) ctx.drawImage(stairsImg, s.x, s.y, s.width, s.height);
-}
-
-function drawPlayer() {
-  ctx.fillText("🐱", player.x, player.y + player.height);
-}
-
-function checkCollision(rects) {
-  player.onGround = false;
-  for (let r of rects) {
-    if (player.x < r.x + r.width &&
-        player.x + player.width > r.x &&
-        player.y + player.height < r.y + r.height &&
-        player.y + player.height + player.vy >= r.y) {
-      player.vy = 0;
-      player.y = r.y - player.height;
-      player.onGround = true;
-    }
-  }
-}
-
-function update() {
-  // horizontal movement
-  if (keys["ArrowLeft"] || keys["a"]) player.x -= 5;
-  if (keys["ArrowRight"] || keys["d"]) player.x += 5;
-  
-  // jump
-  if ((keys["ArrowUp"] || keys["w"]) && player.onGround) {
-    player.vy = -15;
-    player.onGround = false;
-  }
-
-  // gravity
-  player.vy += gravity;
+  // Gravity
+  player.vy += 0.5;
   player.y += player.vy;
+  player.onGround=false;
 
-  // collision
-  checkCollision([...floorTiles, ...stairs]);
+  // Floor collision
+  if(player.y + player.height > floor.y) {
+    player.y = floor.y - player.height;
+    player.vy=0;
+    player.onGround=true;
+  }
+
+  // Stairs collision
+  stairs.forEach(s=>{
+    if(player.x + player.width > s.x && player.x < s.x + s.width &&
+       player.y + player.height > s.y && player.y + player.height < s.y + s.height + player.vy) {
+      player.y = s.y - player.height;
+      player.vy=0;
+      player.onGround=true;
+    }
+  });
+
+  // Jump
+  if((keys['ArrowUp'] || keys['KeyW'] || keys['Space']) && player.onGround){
+    player.vy=-player.jumpPower;
+  }
 }
 
-function draw() {
+/**/ function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawFloor();
-  drawStairs();
-  drawPlayer();
+
+  // Draw floor
+  ctx.fillStyle='#654321';
+  ctx.fillRect(floor.x,floor.y,floor.width,floor.height);
+
+  // Draw stairs
+  ctx.fillStyle='#a0522d';
+  stairs.forEach(s=> ctx.fillRect(s.x,s.y,s.width,s.height));
+
+  // Draw player 🐱
+  ctx.font = player.height+'px serif';
+  ctx.fillText('🐱', player.x, player.y + player.height);
 }
 
-function loop() {
+/**/ function gameLoop() {
   update();
   draw();
-  requestAnimationFrame(loop);
+  requestAnimationFrame(gameLoop);
 }
 
-/**/ loop();
+/**/ gameLoop();
 </script>
 </body>
 </html>
