@@ -4,123 +4,140 @@
 <meta charset="UTF-8">
 <title>Cat Fortress 2</title>
 <style>
-  body { margin: 0; overflow: hidden; background: #a0d8f1; }
-  canvas { display: block; background: #a0d8f1; }
+  body { margin:0; overflow:hidden; background:#87CEEB; }
+  canvas { display:block; margin:0 auto; background:#87CEEB; }
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
+<canvas id="gameCanvas" width="800" height="400"></canvas>
 <script>
-// Canvas setup
-const canvas = document.getElementById('game');
+/**/
+const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = 800;
-canvas.height = 400;
 
-// Images
 const floorImg = new Image();
 floorImg.src = 'floor.png'; // 512x127
+
 const stairsImg = new Image();
 stairsImg.src = 'stairs.png'; // 40x32
 
-// Game objects
-const floors = [];
-const stairs = [];
-const floorWidth = 120;
-const floorHeight = 32;
-const stairWidth = 40;
-const stairHeight = 32;
+const playerEmoji = "🐱";
+const gunEmoji = "🔫";
+let player = { x:100, y:200, w:32, h:32, vx:0, vy:0, dir:1 }; // dir: 1 right, -1 left
 
-// Create floor tiles
-for(let i=0; i<canvas.width; i+=floorWidth){
-    floors.push({x:i, y:canvas.height-floorHeight, w:floorWidth, h:floorHeight});
+const gravity = 0.5;
+let keys = {};
+
+const bullets = [];
+const bulletSpeed = 7;
+
+const floor = { x:0, y:canvas.height-32, w:120, h:32 }; // resized floor
+let stairs = [
+    {x:150, y:canvas.height-64, w:40, h:32},
+    {x:185, y:canvas.height-96, w:40, h:32},
+    {x:220, y:canvas.height-128, w:40, h:32}
+];
+
+document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+// shoot bullets on click
+document.addEventListener('click', () => {
+    bullets.push({ x:player.x + player.w/2, y:player.y + player.h/2, dir:player.dir });
+});
+
+function rectsOverlap(r1, r2){
+    return !(r2.x > r1.x+r1.w || r2.x+r2.w < r1.x || r2.y > r1.y+r1.h || r2.y+r2.h < r1.y);
 }
 
-// Create stairs
-let startX = 100; // starting x
-let startY = canvas.height-floorHeight;
-for(let i=0; i<5; i++){
-    stairs.push({x:startX + i*35, y:startY - (i+1)*stairHeight, w:stairWidth, h:stairHeight});
-}
-
-// Player
-const player = {
-    x:50,
-    y:canvas.height-floorHeight-20,
-    w:20,
-    h:20,
-    vy:0,
-    speed:2,
-    jumping:false
-};
-
-// Keys
-const keys = {};
-document.addEventListener('keydown', e=>{keys[e.key]=true;});
-document.addEventListener('keyup', e=>{keys[e.key]=false;});
-
-// Collision helper
-function rectCollision(r1, r2){
-    return r1.x + r1.w > r2.x && r1.x < r2.x + r2.w &&
-           r1.y + r1.h > r2.y && r1.y < r2.y + r2.h;
-}
-
-// Game loop
 function update(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    
-    // Draw floor
-    floors.forEach(f=>{
-        ctx.drawImage(floorImg, 0, 0, 512,127, f.x, f.y, f.w, f.h);
-    });
-    
-    // Draw stairs
-    stairs.forEach(s=>{
-        ctx.drawImage(stairsImg, 0,0,40,32, s.x, s.y, s.w, s.h);
-    });
-    
-    // Player physics
-    if(keys[' ']){ // jump
-        if(!player.jumping){
-            player.vy = -6;
-            player.jumping = true;
+    // horizontal movement
+    if(keys['a']) { player.vx = -3; player.dir = -1; }
+    else if(keys['d']) { player.vx = 3; player.dir = 1; }
+    else player.vx = 0;
+
+    // jumping
+    if(keys[' '] && onGround()) player.vy = -10;
+
+    // gravity
+    player.vy += gravity;
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // floor collision
+    if(!keys['shift']){
+        if(rectsOverlap(player, floor)){
+            player.y = floor.y - player.h;
+            player.vy = 0;
+        }
+        // stairs collision
+        for(let s of stairs){
+            if(rectsOverlap(player, s)){
+                player.y = s.y - player.h;
+                player.vy = 0;
+            }
         }
     }
-    player.vy += 0.3; // gravity
-    player.y += player.vy;
-    
-    // Move left/right
-    if(keys['a']) player.x -= player.speed;
-    if(keys['d']) player.x += player.speed;
-    
-    // Floor collision
-    let onGround = false;
-    floors.forEach(f=>{
-        if(rectCollision(player, f)){
-            player.y = f.y - player.h;
-            player.vy = 0;
-            player.jumping = false;
-            onGround = true;
-        }
-    });
-    
-    // Stairs collision
-    stairs.forEach(s=>{
-        if(!keys['Shift'] && rectCollision(player, s)){
-            player.y = s.y - player.h;
-            player.vy = 0;
-            player.jumping = false;
-        }
-    });
-    
-    // Draw player
-    ctx.font = "30px Arial";
-    ctx.fillText("🐱", player.x, player.y+player.h);
-    
-    requestAnimationFrame(update);
+
+    // update bullets
+    for(let i=bullets.length-1; i>=0; i--){
+        bullets[i].x += bulletSpeed * bullets[i].dir;
+        if(bullets[i].x < 0 || bullets[i].x > canvas.width) bullets.splice(i,1);
+    }
 }
 
-floorImg.onload = ()=>{stairsImg.onload = ()=>{update();}};
+function onGround(){
+    if(rectsOverlap(player, floor)) return true;
+    for(let s of stairs){
+        if(rectsOverlap(player, s)) return true;
+    }
+    return false;
+}
+
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // draw repeating floor
+    for(let i=0;i<canvas.width;i+=floor.w){
+        ctx.drawImage(floorImg, i, floor.y, floor.w, floor.h);
+    }
+
+    // draw stairs
+    for(let s of stairs){
+        ctx.drawImage(stairsImg, s.x, s.y, s.w, s.h);
+    }
+
+    // draw player
+    ctx.font = player.h + "px serif";
+    ctx.fillText(playerEmoji, player.x, player.y + player.h);
+
+    // draw gun
+    ctx.save();
+    ctx.font = player.h + "px serif";
+    ctx.translate(player.x + player.w/2, player.y + player.h/2);
+    ctx.scale(player.dir,1);
+    ctx.fillText(gunEmoji, -player.w/2, 0);
+    ctx.restore();
+
+    // draw bullets
+    ctx.fillStyle = 'black';
+    for(let b of bullets){
+        ctx.fillRect(b.x, b.y, 5, 5);
+    }
+}
+
+function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+floorImg.onload = () => {
+    stairsImg.onload = () => {
+        loop();
+    }
+}
+/**/
 </script>
 </body>
 </html>
