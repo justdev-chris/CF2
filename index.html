@@ -1,98 +1,103 @@
-<!-- Ultimate Cat TF2 Mini: Floor + Cat Player -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>CF2 Demo</title>
+<title>Cat Fortress 2</title>
 <style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: #cce7ff; /* sky-ish background */
-  }
   canvas {
+    border: 2px solid #333;
+    background-color: #87CEEB; /* sky color */
     display: block;
+    margin: 0 auto;
   }
 </style>
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
+
+<canvas id="gameCanvas" width="800" height="400"></canvas>
+
 <script>
-/** human typed it, hehe~ **/
+/**/
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-canvas.width = 800;
-canvas.height = 400;
-
-// Floor
+/**/ 
 const floorImg = new Image();
-floorImg.src = 'floor.png'; // replace with your 512x127 PNG floor tile
-const floor = {
-  x: 0,
-  y: canvas.height - 127,
-  width: canvas.width,
-  height: 127
-};
+floorImg.src = 'floor.png'; // your 512x127 floor tile
 
-// Player (cat emoji)
+/**/ 
+// scaled floor size
+const floorWidth = 128; 
+const floorHeight = 32; 
+const floors = [
+  {x: 0, y: canvas.height - floorHeight},
+  {x: 128, y: canvas.height - floorHeight},
+  {x: 256, y: canvas.height - floorHeight},
+  {x: 384, y: canvas.height - floorHeight},
+  {x: 512, y: canvas.height - floorHeight},
+  {x: 640, y: canvas.height - floorHeight},
+  {x: 768, y: canvas.height - floorHeight}
+];
+
+/**/ 
 const player = {
-  x: 100,
-  y: 0,
+  x: 50,
+  y: canvas.height - floorHeight - 32,
   width: 32,
   height: 32,
+  emoji: "🐱",
   vy: 0,
   gravity: 0.8,
   jumpPower: -12
 };
 
-// Keyboard input
-const keys = {};
-window.addEventListener("keydown", e => keys[e.key] = true);
-window.addEventListener("keyup", e => keys[e.key] = false);
+/**/ 
+function drawFloor() {
+  for (let f of floors) {
+    ctx.drawImage(floorImg, f.x, f.y, floorWidth, floorHeight);
+  }
+}
 
-function update() {
-  // Horizontal movement
-  if (keys["ArrowLeft"]) player.x -= 5;
-  if (keys["ArrowRight"]) player.x += 5;
+/**/ 
+function drawPlayer() {
+  ctx.font = `${player.height}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.fillText(player.emoji, player.x + player.width/2, player.y + player.height);
+}
 
-  // Gravity
+/**/ 
+function updatePlayer() {
   player.vy += player.gravity;
   player.y += player.vy;
 
-  // Floor collision
-  if (player.y + player.height > floor.y) {
-    player.y = floor.y - player.height;
+  // simple floor collision
+  if (player.y + player.height > canvas.height - floorHeight) {
+    player.y = canvas.height - floorHeight - player.height;
     player.vy = 0;
   }
+}
 
-  // Jump
-  if (keys["ArrowUp"] && player.y + player.height === floor.y) {
+/**/ 
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && player.vy === 0) {
     player.vy = player.jumpPower;
   }
-}
+});
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw floor
-  ctx.drawImage(floorImg, floor.x, floor.y, floor.width, floor.height);
-
-  // Draw cat player
-  ctx.font = "32px serif";
-  ctx.fillText("🐱", player.x, player.y + player.height);
-}
-
+/**/ 
 function gameLoop() {
-  update();
-  draw();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawFloor();
+  updatePlayer();
+  drawPlayer();
   requestAnimationFrame(gameLoop);
 }
 
+/**/ 
 floorImg.onload = () => {
   gameLoop();
 };
 </script>
+
 </body>
 </html>
