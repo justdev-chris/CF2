@@ -4,139 +4,174 @@
 <meta charset="UTF-8">
 <title>Cat Fortress 2</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden; /* remove scrollbars */
-  }
-  canvas {
-    display: block;
-  }
+  body { margin:0; overflow:hidden; background:#87ceeb; }
+  canvas { display:block; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <script>
+// /**/ Cat Fortress 2 - Multiple Floors & Stairs 🐾
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-
-// make canvas full screen
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// images
-const backgroundImg = new Image();
-backgroundImg.src = 'background.png'; // your background image
+// player
+const player = { x:100, y:100, w:32, h:32, dy:0, onGround:false, dir:1 };
 
+// gun emoji
+const gunEmoji = '🔫';
+
+// bullets array
+const bullets = [];
+
+// images
 const floorImg = new Image();
 floorImg.src = 'floor.png'; // 512x127
-
 const stairImg = new Image();
 stairImg.src = 'stairs.png'; // 40x32
 
-const playerEmoji = '😺';
-const gunEmoji = '🔫';
+// floors & stairs setup
+const floors = [];
+const stairs = [];
+const floorW = 120;
+const floorH = 32;
+const stairW = 40;
+const stairH = 32;
+const stairOffsetX = 35;
 
-let keys = {};
-document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+// create 3 floors
+for(let i=0;i<3;i++){
+  let fy = canvas.height - floorH - i*(floorH+stairH*2);
+  floors.push({x:0, y:fy, w:floorW, h:floorH});
 
-canvas.addEventListener('mousedown', shoot);
-
-const floor = {x:0, y:canvas.height - 32, w:120, h:32};
-const stairs = [
-  {x:35, y:canvas.height - 64, w:40, h:32},
-  {x:70, y:canvas.height - 96, w:40, h:32}
-];
-
-const player = {x:50, y:floor.y - 32, w:32, h:32, dy:0, speed:2, jump:-7, dir:1};
-const gravity = 0.3;
-let bullets = [];
-
-function shoot() {
-  let bulletX = player.x + player.w/2 + (player.dir > 0 ? player.w/2 : -player.w/2);
-  let bulletY = player.y + player.h/2 - 5;
-  bullets.push({x: bulletX, y: bulletY, dx: player.dir*5, dy:0, size:5});
+  // add stairs to next floor (skip top floor)
+  if(i<2){
+    stairs.push({x:floors[i].x, y:fy - stairH, w:stairW, h:stairH});
+    stairs.push({x:floors[i].x+stairOffsetX, y:fy - stairH*2, w:stairW, h:stairH});
+  }
 }
 
-function update() {
-  if(keys['a']) { player.x -= player.speed; player.dir = -1; }
-  if(keys['d']) { player.x += player.speed; player.dir = 1; }
+// keyboard
+const keys = {};
+document.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
 
-  if(keys[' '] && player.dy === 0) { player.dy = player.jump; }
+// mouse
+let mouseDown=false;
+document.addEventListener('mousedown', ()=>mouseDown=true);
+document.addEventListener('mouseup', ()=>mouseDown=false);
 
+let mouseX=0, mouseY=0;
+document.addEventListener('mousemove', e=>{mouseX=e.clientX; mouseY=e.clientY;});
+
+// physics
+const gravity = 0.5;
+
+// game loop
+function update(){
+  // horizontal movement
+  if(keys['a']) { player.x -=5; player.dir=-1; }
+  if(keys['d']) { player.x +=5; player.dir=1; }
+
+  // jump
+  if(keys[' '] && player.onGround){ player.dy=-12; player.onGround=false; }
+
+  // shift noclip through stairs
+  const noclip = keys['shift'];
+
+  // vertical movement
   player.dy += gravity;
   player.y += player.dy;
 
-  if(player.y + player.h > floor.y) {
-    player.y = floor.y - player.h;
-    player.dy = 0;
-  }
-
-  stairs.forEach(s => {
-    if(player.x + player.w > s.x && player.x < s.x + s.w && player.y + player.h > s.y && player.y < s.y + s.h) {
-      if(!keys['shift']) {
-        player.y = s.y - player.h;
-        player.dy = 0;
-      }
+  // floor collision
+  player.onGround=false;
+  floors.forEach(f=>{
+    if(!noclip && player.y+player.h > f.y && player.y+player.h < f.y+player.h+20 && player.x+player.w > f.x){
+      player.y = f.y - player.h;
+      player.dy=0;
+      player.onGround=true;
     }
   });
 
-  bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
-  bullets = bullets.filter(b => b.x > 0 && b.x < canvas.width);
-}
-
-function draw() {
-  // background
-  ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-
-  // floor repeating
-  for(let i=0; i<canvas.width; i+=floor.w){
-    ctx.drawImage(floorImg, i, floor.y, floor.w, floor.h);
-  }
-
-  // stairs
-  stairs.forEach(s => ctx.drawImage(stairImg, s.x, s.y, s.w, s.h));
-
-  // player
-  ctx.font = player.h + "px serif";
-  ctx.textBaseline = 'top';
-  ctx.fillText(playerEmoji, player.x, player.y);
-
-  // gun
-  ctx.save();
-  ctx.translate(player.x + player.w/2, player.y + player.h/2);
-  ctx.scale(player.dir, 1);
-  ctx.fillText(gunEmoji, player.w/2, -player.h/2);
-  ctx.restore();
+  // stairs collision
+  stairs.forEach(st=>{
+    if(!noclip &&
+       player.x + player.w > st.x && player.x < st.x + st.w &&
+       player.y + player.h > st.y && player.y < st.y + st.h){
+         player.y = st.y - player.h;
+         player.dy=0;
+         player.onGround=true;
+       }
+  });
 
   // bullets
-  bullets.forEach(b => {
-    ctx.fillStyle = 'black';
-    ctx.fillRect(b.x, b.y, b.size, b.size);
+  bullets.forEach((b,i)=>{
+    b.x += b.dir*10;
+    if(b.x<0 || b.x>canvas.width) bullets.splice(i,1);
   });
+
+  // shooting
+  if(mouseDown){
+    bullets.push({x:player.x+player.w/2, y:player.y+player.h/2, dir:player.dir});
+  }
 }
 
-function loop() {
+// draw loop
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // draw floors
+  floors.forEach(f=>{
+    for(let i=0;i<canvas.width;i+=f.w){
+      ctx.drawImage(floorImg, i, f.y, f.w, f.h);
+    }
+  });
+
+  // draw stairs
+  stairs.forEach(st=>{
+    ctx.drawImage(stairImg, st.x, st.y, st.w, st.h);
+  });
+
+  // draw bullets
+  bullets.forEach(b=>{
+    ctx.fillStyle='black';
+    ctx.fillRect(b.x,b.y,5,5);
+  });
+
+  // draw player
+  ctx.font = player.h + "px serif";
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText('🐱', player.x+player.w/2, player.y+player.h/2);
+
+  // draw gun
+  ctx.textAlign = player.dir>0 ? 'left':'right';
+  ctx.fillText(gunEmoji, player.x + (player.dir>0 ? player.w : 0), player.y+player.h/2);
+}
+
+function loop(){
   update();
   draw();
   requestAnimationFrame(loop);
 }
 
-backgroundImg.onload = () => {
-  floorImg.onload = () => {
-    stairImg.onload = () => {
-      loop();
-    }
-  }
-}
+loop();
 
-// handle resizing
-window.addEventListener('resize', () => {
+// resize canvas
+window.addEventListener('resize', ()=>{
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  floor.y = canvas.height - floor.h;
+  floors.forEach((f,i)=>{
+    f.y = canvas.height - floorH - i*(floorH+stairH*2);
+  });
+  stairs.forEach((st,i)=>{
+    if(i<stairs.length) st.y = floors[Math.floor(i/2)].y - stairH*(i%2+1);
+  });
 });
+
 </script>
 </body>
 </html>
