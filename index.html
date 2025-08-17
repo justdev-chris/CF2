@@ -4,140 +4,114 @@
 <meta charset="UTF-8">
 <title>Cat Fortress 2</title>
 <style>
-  body { margin:0; overflow:hidden; background:#87CEEB; }
-  canvas { display:block; margin:0 auto; background:#87CEEB; }
+  canvas {
+    background: #87ceeb; /* sky blue bg */
+    display: block;
+    margin: 0 auto;
+  }
 </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="800" height="400"></canvas>
+<canvas id="game" width="800" height="400"></canvas>
 <script>
-/**/
-const canvas = document.getElementById('gameCanvas');
+const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
 const floorImg = new Image();
 floorImg.src = 'floor.png'; // 512x127
 
-const stairsImg = new Image();
-stairsImg.src = 'stairs.png'; // 40x32
+const stairImg = new Image();
+stairImg.src = 'stairs.png'; // 40x32
 
-const playerEmoji = "🐱";
-const gunEmoji = "🔫";
-let player = { x:100, y:200, w:32, h:32, vx:0, vy:0, dir:1 }; // dir: 1 right, -1 left
+const playerEmoji = '😺';
+const gunEmoji = '🔫';
 
-const gravity = 0.5;
 let keys = {};
-
-const bullets = [];
-const bulletSpeed = 7;
-
-const floor = { x:0, y:canvas.height-32, w:120, h:32 }; // resized floor
-let stairs = [
-    {x:150, y:canvas.height-64, w:40, h:32},
-    {x:185, y:canvas.height-96, w:40, h:32},
-    {x:220, y:canvas.height-128, w:40, h:32}
-];
-
 document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-// shoot bullets on click
-document.addEventListener('click', () => {
-    bullets.push({ x:player.x + player.w/2, y:player.y + player.h/2, dir:player.dir });
-});
+const floor = {x:0, y:canvas.height - 32, w:120, h:32};
+const stairs = [
+  {x:35, y:canvas.height - 64, w:40, h:32},
+  {x:70, y:canvas.height - 96, w:40, h:32}
+];
 
-function rectsOverlap(r1, r2){
-    return !(r2.x > r1.x+r1.w || r2.x+r2.w < r1.x || r2.y > r1.y+r1.h || r2.y+r2.h < r1.y);
+const player = {x:50, y:floor.y - 32, w:32, h:32, dy:0, speed:2, jump: -7, dir:1};
+const gravity = 0.3;
+let bullets = [];
+
+function shoot() {
+  bullets.push({x: player.x + player.w/2, y: player.y + player.h/2, dx: player.dir*5, dy:0, size:5});
 }
 
-function update(){
-    // horizontal movement
-    if(keys['a']) { player.vx = -3; player.dir = -1; }
-    else if(keys['d']) { player.vx = 3; player.dir = 1; }
-    else player.vx = 0;
+function update() {
+  // movement
+  if(keys['a']) { player.x -= player.speed; player.dir = -1; }
+  if(keys['d']) { player.x += player.speed; player.dir = 1; }
+  
+  // jump
+  player.dy += gravity;
+  player.y += player.dy;
 
-    // jumping
-    if(keys[' '] && onGround()) player.vy = -10;
+  // collision with floor
+  if(player.y + player.h > floor.y) {
+    player.y = floor.y - player.h;
+    player.dy = 0;
+  }
 
-    // gravity
-    player.vy += gravity;
-    player.x += player.vx;
-    player.y += player.vy;
-
-    // floor collision
-    if(!keys['shift']){
-        if(rectsOverlap(player, floor)){
-            player.y = floor.y - player.h;
-            player.vy = 0;
-        }
-        // stairs collision
-        for(let s of stairs){
-            if(rectsOverlap(player, s)){
-                player.y = s.y - player.h;
-                player.vy = 0;
-            }
-        }
+  // collision with stairs
+  stairs.forEach(s => {
+    if(player.x + player.w > s.x && player.x < s.x + s.w && player.y + player.h > s.y && player.y < s.y + s.h) {
+      if(!keys['shift']) { // hold shift to noclip
+        player.y = s.y - player.h;
+        player.dy = 0;
+      }
     }
+  });
 
-    // update bullets
-    for(let i=bullets.length-1; i>=0; i--){
-        bullets[i].x += bulletSpeed * bullets[i].dir;
-        if(bullets[i].x < 0 || bullets[i].x > canvas.width) bullets.splice(i,1);
-    }
+  // bullets movement
+  bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
+  bullets = bullets.filter(b => b.x > 0 && b.x < canvas.width); // remove offscreen bullets
+
+  if(keys[' ']) { // space to shoot
+    if(!keys['fired']) { shoot(); keys['fired'] = true; }
+  } else { keys['fired'] = false; }
 }
 
-function onGround(){
-    if(rectsOverlap(player, floor)) return true;
-    for(let s of stairs){
-        if(rectsOverlap(player, s)) return true;
-    }
-    return false;
-}
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+  // draw floor repeating
+  for(let i=0; i<canvas.width; i+=floor.w){
+    ctx.drawImage(floorImg, i, floor.y, floor.w, floor.h);
+  }
 
-    // draw repeating floor
-    for(let i=0;i<canvas.width;i+=floor.w){
-        ctx.drawImage(floorImg, i, floor.y, floor.w, floor.h);
-    }
+  // draw stairs
+  stairs.forEach(s => ctx.drawImage(stairImg, s.x, s.y, s.w, s.h));
 
-    // draw stairs
-    for(let s of stairs){
-        ctx.drawImage(stairsImg, s.x, s.y, s.w, s.h);
-    }
+  // draw player
+  ctx.font = player.h + "px serif";
+  ctx.fillText(playerEmoji, player.x, player.y + player.h);
 
-    // draw player
-    ctx.font = player.h + "px serif";
-    ctx.fillText(playerEmoji, player.x, player.y + player.h);
+  // draw gun on side of player
+  let gunX = player.dir === 1 ? player.x + player.w : player.x - player.w/2;
+  ctx.fillText(gunEmoji, gunX, player.y + player.h/2);
 
-    // draw gun
-    ctx.save();
-    ctx.font = player.h + "px serif";
-    ctx.translate(player.x + player.w/2, player.y + player.h/2);
-    ctx.scale(player.dir,1);
-    ctx.fillText(gunEmoji, -player.w/2, 0);
-    ctx.restore();
-
-    // draw bullets
+  // draw bullets
+  bullets.forEach(b => {
     ctx.fillStyle = 'black';
-    for(let b of bullets){
-        ctx.fillRect(b.x, b.y, 5, 5);
-    }
+    ctx.fillRect(b.x, b.y, b.size, b.size);
+  });
 }
 
-function loop(){
-    update();
-    draw();
-    requestAnimationFrame(loop);
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
 }
 
-floorImg.onload = () => {
-    stairsImg.onload = () => {
-        loop();
-    }
-}
-/**/
+floorImg.onload = loop;
+
 </script>
 </body>
 </html>
