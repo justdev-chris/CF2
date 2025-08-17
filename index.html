@@ -41,16 +41,27 @@ const jumpStrength = -12;
 
 // Floor & stairs setup
 const platforms = [
-    {x: 0, y: 350, width: 512, height: 32, img: floorImg},
-    {x: 200, y: 300, width: 40, height: 32, img: stairsImg},
-    {x: 250, y: 270, width: 40, height: 32, img: stairsImg},
-    {x: 290, y: 240, width: 40, height: 32, img: stairsImg}
+    {x: 0, y: 350, width: canvas.width, height: 32, img: floorImg, repeat: true}
+];
+
+const stairs = [
+    {x: 200, y: 318, width: 40, height: 32},
+    {x: 240, y: 286, width: 40, height: 32},
+    {x: 280, y: 254, width: 40, height: 32}
 ];
 
 // Input
 const keys = {};
 window.addEventListener('keydown', e => keys[e.key] = true);
 window.addEventListener('keyup', e => keys[e.key] = false);
+
+// Collision helper
+function rectIntersect(r1, r2) {
+    return !(r2.x > r1.x + r1.width || 
+             r2.x + r2.width < r1.x || 
+             r2.y > r1.y + r1.height ||
+             r2.y + r2.height < r1.y);
+}
 
 // Game loop
 function update() {
@@ -68,8 +79,23 @@ function update() {
     player.vy += gravity;
     player.y += player.vy;
 
-    // Collision
-    let onGround = false;
+    // Collision with stairs (smooth stepping)
+    let onPlatform = false;
+    for (let stair of stairs) {
+        const playerRect = {...player, y: player.y + player.vy};
+        const stairRect = {...stair};
+        if (rectIntersect(playerRect, stairRect)) {
+            // Snap player to stair top
+            if (player.y + player.height <= stair.y + stair.height) {
+                player.y = stair.y - player.height;
+                player.vy = 0;
+                player.jumping = false;
+                onPlatform = true;
+            }
+        }
+    }
+
+    // Collision with floor
     for (let plat of platforms) {
         if (
             player.x + player.width > plat.x &&
@@ -80,12 +106,14 @@ function update() {
             player.y = plat.y - player.height;
             player.vy = 0;
             player.jumping = false;
-            onGround = true;
+            onPlatform = true;
         }
     }
 
-    // Floor bounds
-    if (player.y + player.height > canvas.height) {
+    // If falling off
+    if (!onPlatform && player.y + player.height < canvas.height) {
+        player.jumping = true;
+    } else if (player.y + player.height > canvas.height) {
         player.y = canvas.height - player.height;
         player.vy = 0;
         player.jumping = false;
@@ -98,9 +126,20 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw platforms
+    // Draw floor (repeating)
     for (let plat of platforms) {
-        ctx.drawImage(plat.img, plat.x, plat.y, plat.width, plat.height);
+        if (plat.repeat) {
+            const pattern = ctx.createPattern(plat.img, 'repeat-x');
+            ctx.fillStyle = pattern;
+            ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+        } else {
+            ctx.drawImage(plat.img, plat.x, plat.y, plat.width, plat.height);
+        }
+    }
+
+    // Draw stairs
+    for (let stair of stairs) {
+        ctx.drawImage(stairsImg, stair.x, stair.y, stair.width, stair.height);
     }
 
     // Draw player emoji
