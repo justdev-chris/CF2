@@ -1,4 +1,4 @@
-<!-- Cat Fortress 2: Lil Catboy Edition 🐾 -->
+<!-- Cat Fortress 2 🐾 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -35,8 +35,10 @@ const gravity = 0.5;
 // /**/ Floor
 const floorImg = new Image();
 floorImg.src = "floor.png"; // 512x127
+const floorHeight = 60; // scaled height
+
 const floors = [
-  {x:0, y:canvas.height-60, width:canvas.width, height:60}
+  {x:0, y:canvas.height-floorHeight, width:canvas.width, height:floorHeight}
 ];
 
 // /**/ Stairs
@@ -108,9 +110,11 @@ function update() {
 function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // /**/ Draw floor tiled
-  for(let i=0; i<Math.ceil(canvas.width / floorImg.width); i++){
-    ctx.drawImage(floorImg, i*floorImg.width, canvas.height-60, floorImg.width, 60);
+  // /**/ Draw floor normally, scaled and repeated
+  const floorScale = floorHeight / floorImg.height;
+  const floorWidthScaled = floorImg.width * floorScale;
+  for(let i=0; i<Math.ceil(canvas.width / floorWidthScaled); i++){
+    ctx.drawImage(floorImg, i*floorWidthScaled, canvas.height-floorHeight, floorWidthScaled, floorHeight);
   }
 
   // /**/ Draw stairs
