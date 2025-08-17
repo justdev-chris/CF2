@@ -26,16 +26,25 @@ const stairsImg = new Image();
 stairsImg.src = 'stairs.png'; // your stairs PNG
 
 // /**/ Scale settings
-const FLOOR_HEIGHT = 32; // height in game units
-const STAIRS_HEIGHT = 32;
-const SCALE = 1.5; // scale factor for all tiles
+const FLOOR_SCALE = 1.5;
+const STAIRS_SCALE = 1.5;
 
-// /**/ Tiles
-const floor = { x: 0, y: canvas.height - FLOOR_HEIGHT * SCALE, width: canvas.width, height: FLOOR_HEIGHT * SCALE };
-const stairs = { x: 300, y: canvas.height - FLOOR_HEIGHT * SCALE - STAIRS_HEIGHT * SCALE, width: 40 * SCALE, height: STAIRS_HEIGHT * SCALE };
+// /**/ Floor tiles
+const floorHeight = 32 * FLOOR_SCALE;
+const floorTiles = Math.ceil(canvas.width / (floorImg.width * FLOOR_SCALE));
+const floors = [
+    canvas.height - floorHeight,          // ground floor
+    canvas.height - floorHeight - 100     // second floor
+];
+
+// /**/ Stairs
+const stairs = [
+    { x: 300, y: floors[0] - 32 * STAIRS_SCALE, width: 40 * STAIRS_SCALE, height: 32 * STAIRS_SCALE, leadsTo: floors[1] },
+    { x: 600, y: floors[0] - 32 * STAIRS_SCALE, width: 40 * STAIRS_SCALE, height: 32 * STAIRS_SCALE, leadsTo: floors[1] }
+];
 
 // /**/ Player
-const player = { x: 50, y: floor.y - 32, width: 32, height: 32, vy: 0, speed: 3, jumping: false };
+const player = { x: 50, y: floors[0] - 32, width: 32, height: 32, vy: 0, speed: 3, jumping: false };
 
 // /**/ Gravity
 const gravity = 0.7;
@@ -47,14 +56,30 @@ document.addEventListener('keyup', e => keys[e.key] = false);
 
 // /**/ Game loop
 function loop() {
-    // Clear
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw floor
-    ctx.drawImage(floorImg, 0, 0, floorImg.width, floorImg.height, floor.x, floor.y, floor.width, floor.height);
+    // Draw floors
+    floors.forEach(floorY => {
+        for (let i = 0; i < floorTiles; i++) {
+            ctx.drawImage(
+                floorImg,
+                0, 0, floorImg.width, floorImg.height,
+                i * floorImg.width * FLOOR_SCALE,
+                floorY,
+                floorImg.width * FLOOR_SCALE,
+                floorHeight
+            );
+        }
+    });
 
     // Draw stairs
-    ctx.drawImage(stairsImg, 0, 0, stairsImg.width, stairsImg.height, stairs.x, stairs.y, stairs.width, stairs.height);
+    stairs.forEach(s => {
+        ctx.drawImage(
+            stairsImg,
+            0, 0, stairsImg.width, stairsImg.height,
+            s.x, s.y, s.width, s.height
+        );
+    });
 
     // Player movement
     if (keys['ArrowLeft']) player.x -= player.speed;
@@ -68,23 +93,33 @@ function loop() {
     player.vy += gravity;
     player.y += player.vy;
 
-    // Collisions with floor
-    if (player.y + player.height > floor.y) {
-        player.y = floor.y - player.height;
-        player.vy = 0;
-        player.jumping = false;
-    }
+    // Floor collisions
+    let onFloor = false;
+    floors.forEach(floorY => {
+        if (player.y + player.height > floorY) {
+            if (player.y + player.height < floorY + player.vy + 5) {
+                player.y = floorY - player.height;
+                player.vy = 0;
+                player.jumping = false;
+                onFloor = true;
+            }
+        }
+    });
 
-    // Collisions with stairs (simple AABB)
-    if (player.x + player.width > stairs.x &&
-        player.x < stairs.x + stairs.width &&
-        player.y + player.height > stairs.y &&
-        player.y + player.height < stairs.y + stairs.height + 10 &&
-        player.vy >= 0) {
-        player.y = stairs.y - player.height;
-        player.vy = 0;
-        player.jumping = false;
-    }
+    // Stairs collisions
+    stairs.forEach(s => {
+        if (
+            player.x + player.width > s.x &&
+            player.x < s.x + s.width &&
+            player.y + player.height > s.y &&
+            player.y + player.height < s.y + s.height + 10 &&
+            player.vy >= 0
+        ) {
+            player.y = s.leadsTo - player.height;
+            player.vy = 0;
+            player.jumping = false;
+        }
+    });
 
     // Draw cat emoji player
     ctx.font = player.height + 'px Arial';
