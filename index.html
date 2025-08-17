@@ -27,8 +27,8 @@ stairImg.src = 'stairs.png'; // 40x32
 const player = {
   x: 50,
   y: 250,
-  width: 20,
-  height: 20,
+  width: 30, // bigger cat
+  height: 30,
   dy: 0,
   speed: 3,
   jumpPower: -7,
@@ -36,11 +36,11 @@ const player = {
 };
 
 // Floor and stairs data
-const floors = [{x:0, y:canvas.height - 64, width:canvas.width, height:64}];
+const floor = {x:0, y:canvas.height - 64, width:canvas.width, height:32}; // thin but use image size ratio
 const stairs = [
-  {x: 300, y: 320, width:40, height:32},
-  {x: 340, y: 288, width:40, height:32}, 
-  {x: 380, y: 256, width:40, height:32} // manually lined up
+  {x: 300, y: floor.y - 32, width:40, height:32},
+  {x: 340, y: floor.y - 64, width:40, height:32}, 
+  {x: 380, y: floor.y - 96, width:40, height:32} // manually lined up
 ];
 
 let keys = {};
@@ -65,14 +65,12 @@ function update() {
 
   // Collision with floor
   player.onGround = false;
-  floors.forEach(f => {
-    if(player.x < f.x + f.width && player.x + player.width > f.x &&
-       player.y < f.y + f.height && player.y + player.height > f.y){
-      player.y = f.y - player.height;
-      player.dy = 0;
-      player.onGround = true;
-    }
-  });
+  if(player.x < floor.x + floor.width && player.x + player.width > floor.x &&
+     player.y < floor.y + floor.height && player.y + player.height > floor.y){
+    player.y = floor.y - player.height;
+    player.dy = 0;
+    player.onGround = true;
+  }
 
   // Collision with stairs (shift noclip)
   stairs.forEach(s => {
@@ -89,16 +87,16 @@ function update() {
 function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Draw repeated floor properly scaled
-  for(let i=0;i<canvas.width;i+=256){ // scaled down to 256 width
-    ctx.drawImage(floorImg, i, canvas.height - 64, 256, 32); // floor resized to fit nicely
+  // Draw floor scaled thin but keep image aspect
+  for(let i=0;i<canvas.width;i+=256){ 
+    ctx.drawImage(floorImg, i, floor.y, 256, 32); // thin but correct aspect ratio
   }
 
   // Draw stairs scaled
   stairs.forEach(s => ctx.drawImage(stairImg, s.x, s.y, s.width, s.height));
 
-  // Draw player
-  ctx.font = '20px serif';
+  // Draw bigger cat player
+  ctx.font = '30px serif';
   ctx.fillText('😺', player.x, player.y + player.height);
 }
 
