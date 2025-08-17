@@ -5,7 +5,7 @@
 <title>Cat Fortress 2</title>
 <style>
   canvas {
-    background: #87ceeb; /* sky blue bg */
+    background: #87ceeb;
     display: block;
     margin: 0 auto;
   }
@@ -30,26 +30,33 @@ let keys = {};
 document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
+canvas.addEventListener('mousedown', shoot);
+
 const floor = {x:0, y:canvas.height - 32, w:120, h:32};
 const stairs = [
   {x:35, y:canvas.height - 64, w:40, h:32},
   {x:70, y:canvas.height - 96, w:40, h:32}
 ];
 
-const player = {x:50, y:floor.y - 32, w:32, h:32, dy:0, speed:2, jump: -7, dir:1};
+const player = {x:50, y:floor.y - 32, w:32, h:32, dy:0, speed:2, jump:-7, dir:1};
 const gravity = 0.3;
 let bullets = [];
 
 function shoot() {
-  bullets.push({x: player.x + player.w/2, y: player.y + player.h/2, dx: player.dir*5, dy:0, size:5});
+  // bullets spawn from gun tip
+  let bulletX = player.x + player.w/2 + (player.dir > 0 ? player.w/2 : -player.w/2);
+  let bulletY = player.y + player.h/2 - 5; // slightly above center
+  bullets.push({x: bulletX, y: bulletY, dx: player.dir*5, dy:0, size:5});
 }
 
 function update() {
   // movement
   if(keys['a']) { player.x -= player.speed; player.dir = -1; }
   if(keys['d']) { player.x += player.speed; player.dir = 1; }
-  
+
   // jump
+  if(keys[' '] && player.dy === 0) { player.dy = player.jump; }
+
   player.dy += gravity;
   player.y += player.dy;
 
@@ -71,11 +78,7 @@ function update() {
 
   // bullets movement
   bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
-  bullets = bullets.filter(b => b.x > 0 && b.x < canvas.width); // remove offscreen bullets
-
-  if(keys[' ']) { // space to shoot
-    if(!keys['fired']) { shoot(); keys['fired'] = true; }
-  } else { keys['fired'] = false; }
+  bullets = bullets.filter(b => b.x > 0 && b.x < canvas.width);
 }
 
 function draw() {
@@ -91,11 +94,15 @@ function draw() {
 
   // draw player
   ctx.font = player.h + "px serif";
-  ctx.fillText(playerEmoji, player.x, player.y + player.h);
+  ctx.textBaseline = 'top';
+  ctx.fillText(playerEmoji, player.x, player.y);
 
   // draw gun on side of player
-  let gunX = player.dir === 1 ? player.x + player.w : player.x - player.w/2;
-  ctx.fillText(gunEmoji, gunX, player.y + player.h/2);
+  ctx.save();
+  ctx.translate(player.x + player.w/2, player.y + player.h/2);
+  ctx.scale(player.dir, 1); // flip gun based on direction
+  ctx.fillText(gunEmoji, player.w/2, -player.h/2);
+  ctx.restore();
 
   // draw bullets
   bullets.forEach(b => {
@@ -111,7 +118,6 @@ function loop() {
 }
 
 floorImg.onload = loop;
-
 </script>
 </body>
 </html>
