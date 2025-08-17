@@ -18,6 +18,12 @@
 /**/ const canvas = document.getElementById('gameCanvas');
 /**/ const ctx = canvas.getContext('2d');
 
+/**/ // Load images
+/**/ const floorImg = new Image();
+floorImg.src = 'floor.png'; // your 512x127 floor PNG
+/**/ const stairsImg = new Image();
+stairsImg.src = 'stairs.png'; // your 40x32 stairs PNG
+
 /**/ // Player 🐱
 /**/ const player = {
   x: 50,
@@ -33,7 +39,7 @@
 /**/ // Floor
 /**/ const floor = {x:0, y:canvas.height-127, width:512, height:127};
 
-/**/ // Stairs 40x32, connected to floor
+/**/ // Stairs
 /**/ const stairs = [
   {x:300, y:canvas.height-127-32, width:40, height:32},
   {x:340, y:canvas.height-127-64, width:40, height:32},
@@ -46,23 +52,19 @@
 /**/ document.addEventListener('keyup', e => keys[e.code]=false);
 
 /**/ function update() {
-  // Horizontal movement
   if(keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
   if(keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
 
-  // Gravity
-  player.vy += 0.5;
+  player.vy += 0.5; // gravity
   player.y += player.vy;
   player.onGround=false;
 
-  // Floor collision
   if(player.y + player.height > floor.y) {
     player.y = floor.y - player.height;
     player.vy=0;
     player.onGround=true;
   }
 
-  // Stairs collision
   stairs.forEach(s=>{
     if(player.x + player.width > s.x && player.x < s.x + s.width &&
        player.y + player.height > s.y && player.y + player.height < s.y + s.height + player.vy) {
@@ -72,7 +74,6 @@
     }
   });
 
-  // Jump
   if((keys['ArrowUp'] || keys['KeyW'] || keys['Space']) && player.onGround){
     player.vy=-player.jumpPower;
   }
@@ -81,13 +82,11 @@
 /**/ function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Draw floor
-  ctx.fillStyle='#654321';
-  ctx.fillRect(floor.x,floor.y,floor.width,floor.height);
+  // Draw floor PNG
+  ctx.drawImage(floorImg, floor.x, floor.y, floor.width, floor.height);
 
-  // Draw stairs
-  ctx.fillStyle='#a0522d';
-  stairs.forEach(s=> ctx.fillRect(s.x,s.y,s.width,s.height));
+  // Draw stairs PNGs
+  stairs.forEach(s=> ctx.drawImage(stairsImg, s.x, s.y, s.width, s.height));
 
   // Draw player 🐱
   ctx.font = player.height+'px serif';
