@@ -26,12 +26,12 @@ stairsImg.src = 'stairs.png'; // 40x32
 // Player
 const player = {
     x: 100,
-    y: 300,
+    y: 0,
     width: 32,
     height: 32,
     vy: 0,
     speed: 3,
-    jumping: false,
+    jumping: true,
     emoji: '😺'
 };
 
@@ -39,11 +39,12 @@ const player = {
 const gravity = 0.6;
 const jumpStrength = -12;
 
-// Floor & stairs setup
+// Platforms (floor)
 const platforms = [
     {x: 0, y: 350, width: canvas.width, height: 32, img: floorImg, repeat: true}
 ];
 
+// Stairs
 const stairs = [
     {x: 200, y: 318, width: 40, height: 32},
     {x: 240, y: 286, width: 40, height: 32},
@@ -79,29 +80,16 @@ function update() {
     player.vy += gravity;
     player.y += player.vy;
 
-    // Collision with stairs (smooth stepping)
+    // Collision detection (floor + stairs)
     let onPlatform = false;
-    for (let stair of stairs) {
-        const playerRect = {...player, y: player.y + player.vy};
-        const stairRect = {...stair};
-        if (rectIntersect(playerRect, stairRect)) {
-            // Snap player to stair top
-            if (player.y + player.height <= stair.y + stair.height) {
-                player.y = stair.y - player.height;
-                player.vy = 0;
-                player.jumping = false;
-                onPlatform = true;
-            }
-        }
-    }
 
-    // Collision with floor
+    // Check floor
     for (let plat of platforms) {
         if (
             player.x + player.width > plat.x &&
             player.x < plat.x + plat.width &&
             player.y + player.height > plat.y &&
-            player.y + player.height < plat.y + plat.height
+            player.y + player.height < plat.y + plat.height + 10 // small tolerance
         ) {
             player.y = plat.y - player.height;
             player.vy = 0;
@@ -110,7 +98,25 @@ function update() {
         }
     }
 
-    // If falling off
+    // Check stairs (smooth stepping)
+    for (let stair of stairs) {
+        const playerBottom = player.y + player.height;
+        const stairTop = stair.y;
+        if (
+            player.x + player.width > stair.x &&
+            player.x < stair.x + stair.width &&
+            playerBottom > stair.y &&
+            playerBottom < stair.y + stair.height + 10 &&
+            player.vy >= 0
+        ) {
+            player.y = stair.y - player.height;
+            player.vy = 0;
+            player.jumping = false;
+            onPlatform = true;
+        }
+    }
+
+    // Falling off
     if (!onPlatform && player.y + player.height < canvas.height) {
         player.jumping = true;
     } else if (player.y + player.height > canvas.height) {
@@ -126,7 +132,7 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw floor (repeating)
+    // Draw floor
     for (let plat of platforms) {
         if (plat.repeat) {
             const pattern = ctx.createPattern(plat.img, 'repeat-x');
@@ -142,12 +148,12 @@ function draw() {
         ctx.drawImage(stairsImg, stair.x, stair.y, stair.width, stair.height);
     }
 
-    // Draw player emoji
+    // Draw player
     ctx.font = player.width + "px Arial";
     ctx.fillText(player.emoji, player.x, player.y + player.height);
 }
 
-// Start loop when images are loaded
+// Start game when images loaded
 floorImg.onload = () => {
     stairsImg.onload = () => {
         update();
