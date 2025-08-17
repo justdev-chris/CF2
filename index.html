@@ -11,7 +11,7 @@
 <body>
 <canvas id="game"></canvas>
 <script>
-// /**/ Cat Fortress 2 - Multiple Floors & Stairs 🐾
+// /**/ Cat Fortress 2 - Stacked Floors & Stairs 🐾
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -24,7 +24,7 @@ const player = { x:100, y:100, w:32, h:32, dy:0, onGround:false, dir:1 };
 // gun emoji
 const gunEmoji = '🔫';
 
-// bullets array
+// bullets
 const bullets = [];
 
 // images
@@ -41,16 +41,17 @@ const floorH = 32;
 const stairW = 40;
 const stairH = 32;
 const stairOffsetX = 35;
+const floorGap = 150; // vertical spacing between floors
 
-// create 3 floors
-for(let i=0;i<3;i++){
-  let fy = canvas.height - floorH - i*(floorH+stairH*2);
+const numFloors = 3;
+for(let i=0;i<numFloors;i++){
+  let fy = canvas.height - floorH - i*floorGap;
   floors.push({x:0, y:fy, w:floorW, h:floorH});
 
   // add stairs to next floor (skip top floor)
-  if(i<2){
+  if(i<numFloors-1){
     stairs.push({x:floors[i].x, y:fy - stairH, w:stairW, h:stairH});
-    stairs.push({x:floors[i].x+stairOffsetX, y:fy - stairH*2, w:stairW, h:stairH});
+    stairs.push({x:floors[i].x + stairOffsetX, y:fy - stairH*2, w:stairW, h:stairH});
   }
 }
 
@@ -79,7 +80,7 @@ function update(){
   // jump
   if(keys[' '] && player.onGround){ player.dy=-12; player.onGround=false; }
 
-  // shift noclip through stairs
+  // shift noclip through stairs/floors
   const noclip = keys['shift'];
 
   // vertical movement
@@ -89,19 +90,20 @@ function update(){
   // floor collision
   player.onGround=false;
   floors.forEach(f=>{
-    if(!noclip && player.y+player.h > f.y && player.y+player.h < f.y+player.h+20 && player.x+player.w > f.x){
+    if(!noclip && player.y + player.h > f.y && player.y + player.h < f.y + f.h + 10 &&
+       player.x + player.w > f.x && player.x < f.x + f.w){
       player.y = f.y - player.h;
       player.dy=0;
       player.onGround=true;
     }
   });
 
-  // stairs collision
+  // stairs collision with a small top gap
   stairs.forEach(st=>{
     if(!noclip &&
        player.x + player.w > st.x && player.x < st.x + st.w &&
-       player.y + player.h > st.y && player.y < st.y + st.h){
-         player.y = st.y - player.h;
+       player.y + player.h > st.y && player.y + player.h < st.y + st.h + 10){
+         player.y = st.y - player.h + 2; // small gap at top
          player.dy=0;
          player.onGround=true;
        }
@@ -165,7 +167,7 @@ window.addEventListener('resize', ()=>{
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   floors.forEach((f,i)=>{
-    f.y = canvas.height - floorH - i*(floorH+stairH*2);
+    f.y = canvas.height - floorH - i*floorGap;
   });
   stairs.forEach((st,i)=>{
     if(i<stairs.length) st.y = floors[Math.floor(i/2)].y - stairH*(i%2+1);
