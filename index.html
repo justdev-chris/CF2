@@ -45,16 +45,16 @@ const stairs = [
 
 let keys = {};
 
-document.addEventListener('keydown', e => keys[e.key] = true);
-document.addEventListener('keyup', e => keys[e.key] = false);
+document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
 function update() {
   // Horizontal movement
-  if(keys['ArrowLeft']) player.x -= player.speed;
-  if(keys['ArrowRight']) player.x += player.speed;
+  if(keys['a']) player.x -= player.speed;
+  if(keys['d']) player.x += player.speed;
 
   // Jump
-  if(keys['ArrowUp'] && player.onGround){
+  if((keys['w'] || keys[' ']) && player.onGround){
     player.dy = player.jumpPower;
     player.onGround = false;
   }
@@ -76,7 +76,7 @@ function update() {
 
   // Collision with stairs (shift noclip)
   stairs.forEach(s => {
-    if(!(keys['Shift']) &&
+    if(!(keys['shift']) &&
        player.x < s.x + s.width && player.x + player.width > s.x &&
        player.y < s.y + s.height && player.y + player.height > s.y){
       player.y = s.y - player.height;
@@ -89,15 +89,16 @@ function update() {
 function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Draw repeated floor
-  for(let i=0;i<canvas.width;i+=floorImg.width){
-    ctx.drawImage(floorImg, i, canvas.height - 64, floorImg.width/2, 64); // scaled to fit
+  // Draw repeated floor properly scaled
+  for(let i=0;i<canvas.width;i+=256){ // scaled down to 256 width
+    ctx.drawImage(floorImg, i, canvas.height - 64, 256, 32); // floor resized to fit nicely
   }
 
-  // Draw stairs
+  // Draw stairs scaled
   stairs.forEach(s => ctx.drawImage(stairImg, s.x, s.y, s.width, s.height));
 
   // Draw player
+  ctx.font = '20px serif';
   ctx.fillText('😺', player.x, player.y + player.height);
 }
 
