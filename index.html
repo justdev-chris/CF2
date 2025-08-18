@@ -1,179 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Cat Fortress 2</title>
-<style>
-  body { margin:0; overflow:hidden; background:#87ceeb; }
-  canvas { display:block; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Cat Fortress 2 🐱</title>
+  <style>
+    body { margin: 0; background: #fff; }
+    canvas { display: block; margin: auto; background: #f0f0f0; }
+  </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-<script>
-// /**/ Cat Fortress 2 - Stacked Floors & Stairs 🐾
+  <canvas id="game" width="800" height="600"></canvas>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
 
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+    let screen = 'home';
+    let selectedClass = null;
+    let selectedMode = null;
 
-// player
-const player = { x:100, y:100, w:32, h:32, dy:0, onGround:false, dir:1 };
+    const classes = [
+      { name: 'Scout', emoji: '🐈', weapon: '🔫' },
+      { name: 'Heavy', emoji: '🐱', weapon: '🧨' },
+      { name: 'Sniper', emoji: '😼', weapon: '🎯' }
+    ];
 
-// gun emoji
-const gunEmoji = '🔫';
+    const modes = ['Training', 'Yarn Control', 'Catpoint'];
 
-// bullets
-const bullets = [];
+    function drawHome() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = '40px serif';
+      ctx.fillText('Cat Fortress 2 🐾', 250, 80);
 
-// images
-const floorImg = new Image();
-floorImg.src = 'floor.png'; // 512x127
-const stairImg = new Image();
-stairImg.src = 'stairs.png'; // 40x32
+      ctx.font = '24px serif';
+      ctx.fillText('Choose Your Class:', 50, 150);
+      classes.forEach((c, i) => {
+        ctx.fillText(`${c.emoji} ${c.name}`, 70, 200 + i * 40);
+      });
 
-// floors & stairs setup
-const floors = [];
-const stairs = [];
-const floorW = 120;
-const floorH = 32;
-const stairW = 40;
-const stairH = 32;
-const stairOffsetX = 35;
-const floorGap = 150; // vertical spacing between floors
+      ctx.fillText('Choose Game Mode:', 400, 150);
+      modes.forEach((m, i) => {
+        ctx.fillText(m, 420, 200 + i * 40);
+      });
 
-const numFloors = 3;
-for(let i=0;i<numFloors;i++){
-  let fy = canvas.height - floorH - i*floorGap;
-  floors.push({x:0, y:fy, w:floorW, h:floorH});
-
-  // add stairs to next floor (skip top floor)
-  if(i<numFloors-1){
-    stairs.push({x:floors[i].x, y:fy - stairH, w:stairW, h:stairH});
-    stairs.push({x:floors[i].x + stairOffsetX, y:fy - stairH*2, w:stairW, h:stairH});
-  }
-}
-
-// keyboard
-const keys = {};
-document.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
-
-// mouse
-let mouseDown=false;
-document.addEventListener('mousedown', ()=>mouseDown=true);
-document.addEventListener('mouseup', ()=>mouseDown=false);
-
-let mouseX=0, mouseY=0;
-document.addEventListener('mousemove', e=>{mouseX=e.clientX; mouseY=e.clientY;});
-
-// physics
-const gravity = 0.5;
-
-// game loop
-function update(){
-  // horizontal movement
-  if(keys['a']) { player.x -=5; player.dir=-1; }
-  if(keys['d']) { player.x +=5; player.dir=1; }
-
-  // jump
-  if(keys[' '] && player.onGround){ player.dy=-12; player.onGround=false; }
-
-  // shift noclip through stairs/floors
-  const noclip = keys['shift'];
-
-  // vertical movement
-  player.dy += gravity;
-  player.y += player.dy;
-
-  // floor collision
-  player.onGround=false;
-  floors.forEach(f=>{
-    if(!noclip && player.y + player.h > f.y && player.y + player.h < f.y + f.h + 10 &&
-       player.x + player.w > f.x && player.x < f.x + f.w){
-      player.y = f.y - player.h;
-      player.dy=0;
-      player.onGround=true;
+      if (selectedClass && selectedMode) {
+        ctx.fillStyle = '#4caf50';
+        ctx.fillRect(300, 500, 200, 50);
+        ctx.fillStyle = '#fff';
+        ctx.fillText('Start Game', 330, 535);
+      }
     }
-  });
 
-  // stairs collision with a small top gap
-  stairs.forEach(st=>{
-    if(!noclip &&
-       player.x + player.w > st.x && player.x < st.x + st.w &&
-       player.y + player.h > st.y && player.y + player.h < st.y + st.h + 10){
-         player.y = st.y - player.h + 2; // small gap at top
-         player.dy=0;
-         player.onGround=true;
-       }
-  });
+    canvas.addEventListener('click', (e) => {
+      const x = e.offsetX;
+      const y = e.offsetY;
 
-  // bullets
-  bullets.forEach((b,i)=>{
-    b.x += b.dir*10;
-    if(b.x<0 || b.x>canvas.width) bullets.splice(i,1);
-  });
+      classes.forEach((c, i) => {
+        if (x > 70 && x < 250 && y > 180 + i * 40 && y < 210 + i * 40) {
+          selectedClass = c;
+        }
+      });
 
-  // shooting
-  if(mouseDown){
-    bullets.push({x:player.x+player.w/2, y:player.y+player.h/2, dir:player.dir});
-  }
-}
+      modes.forEach((m, i) => {
+        if (x > 420 && x < 600 && y > 180 + i * 40 && y < 210 + i * 40) {
+          selectedMode = m;
+        }
+      });
 
-// draw loop
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+      if (x > 300 && x < 500 && y > 500 && y < 550 && selectedClass && selectedMode) {
+        screen = 'game';
+        startGame();
+      }
 
-  // draw floors
-  floors.forEach(f=>{
-    for(let i=0;i<canvas.width;i+=f.w){
-      ctx.drawImage(floorImg, i, f.y, f.w, f.h);
+      drawHome();
+    });
+
+    function startGame() {
+      const player = {
+        x: 400,
+        y: 300,
+        emoji: selectedClass.emoji,
+        weapon: selectedClass.weapon
+      };
+
+      function drawPlayer() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '32px serif';
+        ctx.fillText(player.emoji, player.x, player.y);
+        ctx.fillText(player.weapon, player.x + 30, player.y);
+        ctx.font = '20px serif';
+        ctx.fillText(`${selectedClass.name} - ${selectedMode}`, 10, 30);
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') player.y -= 10;
+        if (e.key === 'ArrowDown') player.y += 10;
+        if (e.key === 'ArrowLeft') player.x -= 10;
+        if (e.key === 'ArrowRight') player.x += 10;
+      });
+
+      function gameLoop() {
+        drawPlayer();
+        requestAnimationFrame(gameLoop);
+      }
+
+      gameLoop();
     }
-  });
 
-  // draw stairs
-  stairs.forEach(st=>{
-    ctx.drawImage(stairImg, st.x, st.y, st.w, st.h);
-  });
-
-  // draw bullets
-  bullets.forEach(b=>{
-    ctx.fillStyle='black';
-    ctx.fillRect(b.x,b.y,5,5);
-  });
-
-  // draw player
-  ctx.font = player.h + "px serif";
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-  ctx.fillText('🐱', player.x+player.w/2, player.y+player.h/2);
-
-  // draw gun
-  ctx.textAlign = player.dir>0 ? 'left':'right';
-  ctx.fillText(gunEmoji, player.x + (player.dir>0 ? player.w : 0), player.y+player.h/2);
-}
-
-function loop(){
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-loop();
-
-// resize canvas
-window.addEventListener('resize', ()=>{
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  floors.forEach((f,i)=>{
-    f.y = canvas.height - floorH - i*floorGap;
-  });
-  stairs.forEach((st,i)=>{
-    if(i<stairs.length) st.y = floors[Math.floor(i/2)].y - stairH*(i%2+1);
-  });
-});
-
-</script>
+    drawHome();
+  </script>
 </body>
 </html>
